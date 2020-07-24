@@ -8,7 +8,7 @@ import HashParserHOC from '../lib/hash-parser-hoc.jsx';
 import log from '../lib/log.js';
 
 const onClickLogo = () => {
-    window.location = 'https://scratch.mit.edu';
+    window.location = 'https://github.com/SheepTester/scratch-gui#url-parameters';
 };
 
 const handleTelemetryModalCancel = () => {
@@ -22,6 +22,27 @@ const handleTelemetryModalOptIn = () => {
 const handleTelemetryModalOptOut = () => {
     log('User opted out of telemetry');
 };
+
+function urlOptionValue (name, defaultValue) {
+    const matches = window.location.href.match(new RegExp(`[?&]${name}=([^&]*)&?`));
+    return matches ? matches[1] : defaultValue;
+}
+
+function urlFlag (name, defaultValue = false) {
+    const matches = window.location.href.match(new RegExp(`[?&]${name}=([^&]+)`));
+    let yes = defaultValue;
+    if (matches) {
+        try {
+            // parse 'true' into `true`, 'false' into `false`, etc.
+            yes = JSON.parse(matches[1]);
+        } catch {
+            // it's not JSON so just use the string
+            // note that a typo like "falsy" will be treated as true
+            yes = matches[1];
+        }
+    }
+    return yes;
+}
 
 /*
  * Render the GUI playground. This is a separate function because importing anything
@@ -39,22 +60,51 @@ export default appTarget => {
         HashParserHOC
     )(GUI);
 
-    // TODO a hack for testing the backpack, allow backpack host to be set by url param
-    const backpackHostMatches = window.location.href.match(/[?&]backpack_host=([^&]*)&?/);
-    const backpackHost = backpackHostMatches ? backpackHostMatches[1] : null;
-
-    const scratchDesktopMatches = window.location.href.match(/[?&]isScratchDesktop=([^&]+)/);
-    let simulateScratchDesktop;
-    if (scratchDesktopMatches) {
-        try {
-            // parse 'true' into `true`, 'false' into `false`, etc.
-            simulateScratchDesktop = JSON.parse(scratchDesktopMatches[1]);
-        } catch {
-            // it's not JSON so just use the string
-            // note that a typo like "falsy" will be treated as true
-            simulateScratchDesktop = scratchDesktopMatches[1];
-        }
+    const loadGriffpatch = urlFlag('load_griffpatch', false);
+    if (loadGriffpatch) {
+        // From https://github.com/griffpatch/Scratch3-Dev-Tools/blob/master/inject.user.js
+        // Ideally, I'd just load inject.user.js directly, but jsdelivr seems to omit it.
+        document.head.appendChild(Object.assign(document.createElement('script'), {
+            src: 'https://cdn.jsdelivr.net/gh/griffpatch/Scratch3-Dev-Tools/inject3.js'
+        }));
+        document.head.appendChild(Object.assign(document.createElement('link'), {
+            href: 'https://cdn.jsdelivr.net/gh/griffpatch/Scratch3-Dev-Tools/inject.css',
+            rel: 'stylesheet'
+        }));
     }
+
+    const loadPlugin = urlOptionValue('load_plugin', null);
+    if (loadPlugin) {
+        document.head.appendChild(Object.assign(document.createElement('script'), {
+            src: decodeURIComponent(loadPlugin)
+        }));
+    }
+
+    // TODO a hack for testing the backpack, allow backpack host to be set by url param
+    // (Currently ignored; it'll always use localStorage)
+    const backpackHost = decodeURIComponent(urlOptionValue('backpack_host', 'localStorage'));
+
+    const cloudHost = decodeURIComponent(urlOptionValue('cloud_host', 'localStorage'));
+
+    const username = urlOptionValue('username', 'username');
+
+    const simulateScratchDesktop = urlFlag('isScratchDesktop', false);
+
+    const compatibilityMode = urlFlag('compatibility_mode', true);
+
+    const extensionURL = urlOptionValue('(?:extension|url)', null);
+
+    const imposeLimits = urlFlag('limits', true);
+
+    const onVmInit = vm => {
+        if (extensionURL) {
+            vm.extensionManager.loadExtensionURL(decodeURIComponent(extensionURL));
+        }
+        if (!imposeLimits) {
+            vm.requireLimits(imposeLimits);
+        }
+        window.vm = vm;
+    };
 
     if (process.env.NODE_ENV === 'production' && typeof window === 'object') {
         // Warn before navigating away
@@ -76,10 +126,14 @@ export default appTarget => {
             <WrappedGui
                 canEditTitle
                 backpackVisible
-                showComingSoon
                 backpackHost={backpackHost}
+                cloudHost={cloudHost}
+                compatibilityMode={compatibilityMode}
+                hasCloudPermission={true}
                 canSave={false}
                 onClickLogo={onClickLogo}
+                onVmInit={onVmInit}
+                username={username}
             />,
         appTarget);
 };

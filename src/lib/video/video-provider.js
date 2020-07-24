@@ -1,6 +1,9 @@
 import {requestVideoStream, requestDisableVideo} from './camera.js';
 import log from '../log.js';
 
+import standardStageSize from '../layout-constants.js';
+const {standardStageWidth, standardStageHeight} = standardStageSize;
+
 /**
  * Video Manager for video extensions.
  */
@@ -50,7 +53,7 @@ class VideoProvider {
      * @type {Array.<number>}
      */
     static get DIMENSIONS () {
-        return [480, 360];
+        return [standardStageWidth, standardStageHeight];
     }
 
     /**
@@ -113,7 +116,7 @@ class VideoProvider {
      * Return frame data from the video feed in a specified dimensions, format, and mirroring.
      *
      * @param {object} frameInfo A descriptor of the frame you would like to receive.
-     * @param {Array.<number>} frameInfo.dimensions [width, height] array of numbers.  Defaults to [480,360]
+     * @param {Array.<number>} frameInfo.dimensions [width, height] array of numbers.  Defaults to [640,360]
      * @param {boolean} frameInfo.mirror If you specificly want a mirror/non-mirror frame, defaults to true
      * @param {string} frameInfo.format Requested video format, available formats are 'image-data' and 'canvas'.
      * @param {number} frameInfo.cacheTimeout Will reuse previous image data if the time since capture is less than
@@ -206,8 +209,8 @@ class VideoProvider {
         }
 
         this._singleSetup = requestVideoStream({
-            width: {min: 480, ideal: 640},
-            height: {min: 360, ideal: 480}
+            width: {min: 480, ideal: standardStageWidth},
+            height: {min: standardStageHeight * 480 / standardStageWidth, ideal: standardStageHeight}
         })
             .then(stream => {
                 this._video = document.createElement('video');

@@ -95,10 +95,6 @@ const base = {
     plugins: []
 };
 
-if (!process.env.CI) {
-    base.plugins.push(new webpack.ProgressPlugin());
-}
-
 module.exports = [
     // to run editor examples
     defaultsDeep({}, base, {
@@ -146,7 +142,7 @@ module.exports = [
             new HtmlWebpackPlugin({
                 chunks: ['lib.min', 'gui'],
                 template: 'src/playground/index.ejs',
-                title: 'Scratch 3.0 GUI',
+                title: 'E羊icques: A Scratch mod with a custom aspect ratio that can load an extension from a URL',
                 sentryConfig: process.env.SENTRY_CONFIG ? '"' + process.env.SENTRY_CONFIG + '"' : null
             }),
             new HtmlWebpackPlugin({
